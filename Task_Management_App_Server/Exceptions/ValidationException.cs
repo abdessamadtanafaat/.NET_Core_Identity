@@ -6,9 +6,10 @@ public class ValidationException : Exception
 {
     public IEnumerable<ValidationFailure> Errors { get; }
 
+    //Constructor that takes a message and a collection of validation failures.
     public ValidationException(string message, IEnumerable<ValidationFailure> errors)
-        : base(message)
+        : base(message) // call the base class constructor with the error message.
     {
-        Errors = errors;
+    Errors = errors;  //Initialize the Errors property with the provided validation failures.                          
     }
 }

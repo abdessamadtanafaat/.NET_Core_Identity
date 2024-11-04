@@ -4,7 +4,7 @@ using Task_Management_App.DTO;
 
 namespace Task_Management_App.Validations;
 
-public class UserDtoValidator : AbstractValidator<UserDto>
+public class UserDtoValidator : AbstractValidator<RegisterDto>
 {
     public UserDtoValidator()
     {
@@ -20,6 +20,5 @@ public class UserDtoValidator : AbstractValidator<UserDto>
             .Matches(@"[0-9]").WithMessage("Password must contain at least one number.");
         RuleFor(user => user.FullName)
             .NotEmpty().WithMessage("Full name is required.");
-        
     }
 }

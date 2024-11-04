@@ -10,11 +10,20 @@ using Task_Management_App.DTO;
 using Task_Management_App.Mappings;
 using Task_Management_App.Models;
 using Task_Management_App.Services;
+using Task_Management_App.Utils;
 using Task_Management_App.Validations;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddScoped<UserService>();
+// Add services to the container.
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Register the IAuthenticationService and AuthenticationService
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<AuthUtils>();
+
 // Database configuration
 builder.Services.AddDbContext<TaskManagementDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -23,17 +32,19 @@ builder.Services.AddDbContext<TaskManagementDbContext>(options =>
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<TaskManagementDbContext>()
     .AddDefaultTokenProviders();
+
 builder.Services.Configure<IdentityOptions>(options =>
 {
-    // PASSWORD POLICY
+    // Password policy
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 6;
     options.Password.RequireLowercase = true;
     options.Password.RequireUppercase = true;
     options.Password.RequireNonAlphanumeric = false;
-    // USERNAME SETTINGS
+    // Username settings
     options.User.RequireUniqueEmail = true;
 }); 
+
 // Configure JWT authentication
 builder.Services.AddAuthentication(options =>
     {
@@ -49,25 +60,25 @@ builder.Services.AddAuthentication(options =>
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt: Audience"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
         };
     });
 
-// add Fluent Validation
-builder.Services.AddTransient<IValidator<UserDto>, UserDtoValidator>();
-builder.Services.AddControllers();
+// Add FluentValidation
+builder.Services.AddTransient<IValidator<RegisterDto>, UserDtoValidator>();
+
+// AutoMapper configuration
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
-//builder.Services.AddMediatR(typeof(Program));
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
+
+// Swagger configuration
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo()
     {
         Version = "v1",
         Title = "Task Management API",
-        Description = "An ASP.NET Core Web API for Task management Application",
+        Description = "An ASP.NET Core Web API for Task Management Application",
         TermsOfService = new Uri("https://example.com/terms"),
         Contact = new OpenApiContact
         {
@@ -76,23 +87,26 @@ builder.Services.AddSwaggerGen(options =>
         },
     });
 });
+
 var app = builder.Build();
 
 app.UseMiddleware<Task_Management_App.Exceptions.ExceptionMiddleware>();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
-        {
-            options.SwaggerEndpoint("/swagger/v1/swagger.json", "Task Management API V1");
-            options.RoutePrefix = string.Empty; // the app's root.
-        }
-    );
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Task Management API V1");
+        options.RoutePrefix = string.Empty; // Set Swagger UI at the root
+    });
 }
 
 app.UseHttpsRedirection();
 
+// Order is important: use authentication before authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

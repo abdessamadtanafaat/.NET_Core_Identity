@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Task_Management_App.DTO;
 
-public class UserDto
+public class RegisterDto
 {
     public string Email { get; set; } = string.Empty;
     [PasswordPropertyText]

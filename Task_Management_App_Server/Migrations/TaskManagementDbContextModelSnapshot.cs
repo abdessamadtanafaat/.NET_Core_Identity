@@ -155,6 +155,19 @@ namespace Task_Management_App.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Task_Management_App.Models.Test", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tests");
+                });
+
             modelBuilder.Entity("Task_Management_App.Models.User", b =>
                 {
                     b.Property<string>("Id")

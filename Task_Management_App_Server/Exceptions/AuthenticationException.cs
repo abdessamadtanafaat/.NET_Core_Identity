@@ -1,8 +1,0 @@
-﻿namespace Task_Management_App.Exceptions;
-
-public class AuthenticationException : Exception
-{
-    public AuthenticationException(string message) : base(message)
-    { }
-
-}

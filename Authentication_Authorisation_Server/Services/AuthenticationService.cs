@@ -67,12 +67,37 @@ public class AuthenticationService : IAuthenticationService
 
     public async Task<TokenResponse> LoginAsync(LoginDto loginDto)
     {
-        var user = await _userManager.FindByEmailAsync(loginDto.Email);
-        if (user == null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
+        var user = await _userManager.FindByEmailAsync(loginDto.Email); 
+        
+        if (user == null)
         {
             throw new AuthenticationException("Invalid Email or password."); 
         }
 
+        int maxFailedAttempts = int.Parse(_configuration["Security:MaxFailedAccessAttempts"]);
+        int lockoutDurationMinutes = int.Parse(_configuration["Security:LockoutDurationMinutes"]); 
+        if (await _userManager.IsLockedOutAsync(user))
+        {
+            throw new InvalidOperationException(
+                "Your account is locked after several unsuccessful attempts. Please try again later."); 
+        }
+
+        if (!await _userManager.CheckPasswordAsync(user, loginDto.Password))
+        {
+            await _userManager.AccessFailedAsync(user);
+
+            if (user.AccessFailedCount >= maxFailedAttempts)
+            {
+                await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddMinutes(lockoutDurationMinutes)); 
+                throw new InvalidOperationException(
+                    "Your account is locked after several unsuccessful attempts. Please try again later.");
+            }
+            throw new AuthenticationException("Invalid Email or password.");
+
+        }
+
+        await _userManager.ResetAccessFailedCountAsync(user);
+        
         var token = _tokenUtils.GenerateJwtToken(user);
         var refreshToken = _tokenUtils.GenerateRefreshToken();
         var refreshTokenExpiryTime = DateTime.UtcNow.AddDays(int.Parse(_configuration["Jwt:RefreshTokenExpirationDays"])); 

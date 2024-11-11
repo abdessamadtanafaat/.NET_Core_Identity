@@ -1,13 +1,15 @@
 ﻿namespace Authentication_Authorisation.Models;
 
-public class AuthResponse
+public class TokenResponse
 {
     public string Token { get; set; }
+    public string RefreshToken { get; set; }
     public string Message { get; set; }
 
-    public AuthResponse(string token, string message)
+    public TokenResponse(string token, string refreshToken ,string message)
     {
         Token = token;
+        RefreshToken = refreshToken;
         Message = message;
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Security.Claims;
 using AutoMapper;
 using FluentValidation;
 using FluentValidation.Results;
@@ -7,7 +8,9 @@ using Authentication_Authorisation.DTO;
 using Authentication_Authorisation.Models;
 using Authentication_Authorisation.Exceptions;
 using Authentication_Authorisation.Utils;
+using Microsoft.IdentityModel.Tokens;
 using TaskValidationException = Authentication_Authorisation.Exceptions.ValidationException;
+using ValidationFailure = FluentValidation.Results.ValidationFailure;
 
 
 namespace Authentication_Authorisation.Services;
@@ -18,19 +21,22 @@ public class AuthenticationService : IAuthenticationService
     private readonly UserManager<User> _userManager;
     private readonly IMapper _mapper;
     private readonly IValidator<RegisterDto> _userDtoValidator;
-    private readonly AuthUtils _authUtils;
+    private readonly TokenUtils _tokenUtils;
+    private readonly IConfiguration _configuration;
 
     public AuthenticationService(
         UserManager<User> userManager,
         IMapper mapper,
         IValidator<RegisterDto> userDtoValidator,
-        AuthUtils authUtils
+        TokenUtils tokenUtils,
+        IConfiguration configuration
         )
     {
         _userManager = userManager;
         _mapper = mapper;
         _userDtoValidator = userDtoValidator;
-        _authUtils = authUtils; 
+        _tokenUtils = tokenUtils;
+        _configuration = configuration;
     }
     
     public async Task<SuccessResponse> RegisterUserAsync(RegisterDto registerDto)
@@ -59,7 +65,7 @@ public class AuthenticationService : IAuthenticationService
         
     }
 
-    public async Task<AuthResponse> LoginAsync(LoginDto loginDto)
+    public async Task<TokenResponse> LoginAsync(LoginDto loginDto)
     {
         var user = await _userManager.FindByEmailAsync(loginDto.Email);
         if (user == null || !await _userManager.CheckPasswordAsync(user, loginDto.Password))
@@ -67,8 +73,57 @@ public class AuthenticationService : IAuthenticationService
             throw new AuthenticationException("Invalid Email or password."); 
         }
 
-        var token = _authUtils.GenerateJwtToken(user);
-        return new AuthResponse(token, "Login successful."); 
+        var token = _tokenUtils.GenerateJwtToken(user);
+        var refreshToken = _tokenUtils.GenerateRefreshToken();
+        var refreshTokenExpiryTime = DateTime.UtcNow.AddDays(int.Parse(_configuration["Jwt:RefreshTokenExpirationDays"])); 
+        
+        return new TokenResponse(token, refreshToken, "Login successful."); 
     }
-    
+
+    public async Task<TokenResponse> RefreshToken(RefreshTokenRequest refreshTokenRequest)
+    {
+        if (string.IsNullOrEmpty(refreshTokenRequest.Token) || string.IsNullOrEmpty(refreshTokenRequest.RefreshToken))
+        {
+            throw new InvalidTokenException("Token cannot be empty.");
+        }
+        ClaimsPrincipal principal = null;
+
+        try
+        { 
+            principal = _tokenUtils.GetPrincipalFromExpiredToken(refreshTokenRequest.Token);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidTokenException("Invalid token provided.");
+        }
+        
+        if (principal == null)
+        {
+            throw new InvalidTokenException("Invalid access token or refresh token");
+        }
+
+        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        var user = await _userManager.FindByIdAsync(userId);
+
+        if (user == null)
+        {
+            throw new InvalidTokenException("User Not Found"); 
+        }
+
+        // Commented out: no need to verify the refresh token with the two-factor provider for now
+        /*var isValidRefreshToken =
+            await _userManager.VerifyUserTokenAsync(user, "Default", "RefreshToken", refreshTokenRequest.RefreshToken);
+        if (!isValidRefreshToken)
+        {
+            throw new InvalidTokenException("Invalid refreshToken");
+        }*/
+        
+        var newAccessToken = _tokenUtils.GenerateJwtToken(user);
+        var newRefreshToken = _tokenUtils.GenerateRefreshToken();
+
+        await _userManager.SetAuthenticationTokenAsync(user, "Default", "RefreshToken", newRefreshToken);
+        return new TokenResponse(newAccessToken,  newRefreshToken,"Token refreshed successfully.");
+
+    }
+
 }

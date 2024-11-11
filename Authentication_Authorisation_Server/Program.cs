@@ -22,7 +22,7 @@ builder.Services.AddSwaggerGen();
 
 // Register the IAuthenticationService and AuthenticationService
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
-builder.Services.AddScoped<AuthUtils>();
+builder.Services.AddScoped<TokenUtils>();
 
 // Database configuration
 builder.Services.AddDbContext<AppDbContext>(options =>

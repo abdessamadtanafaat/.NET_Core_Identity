@@ -46,4 +46,11 @@ public class AuthenticationController : ControllerBase
         "email": "raja@gmail.com",
         "password": "Raja2015"
     }*/
+
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest refreshTokenRequest)
+    {
+        var response = await _authService.RefreshToken(refreshTokenRequest);
+        return Ok(response);
+    }
 }

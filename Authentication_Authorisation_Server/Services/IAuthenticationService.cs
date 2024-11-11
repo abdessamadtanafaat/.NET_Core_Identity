@@ -6,5 +6,6 @@ namespace Authentication_Authorisation.Services;
 public interface IAuthenticationService
 {
     Task<SuccessResponse> RegisterUserAsync(RegisterDto registerDto); 
-    Task<AuthResponse> LoginAsync(LoginDto loginDto); 
+    Task<TokenResponse> LoginAsync(LoginDto loginDto);
+    Task<TokenResponse> RefreshToken(RefreshTokenRequest refreshTokenRequest);
 }

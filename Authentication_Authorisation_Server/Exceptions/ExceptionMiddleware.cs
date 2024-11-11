@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Authentication_Authorisation.Models;
+using Microsoft.IdentityModel.Tokens;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Authentication_Authorisation.Exceptions;
@@ -54,6 +55,13 @@ public class ExceptionMiddleware
                     response.StatusCode,
                     "Invalid email or password.");
                 break;
+            
+            case InvalidTokenException  invalidTokenEx:
+                response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                errorResponse = new ErrorResponse(new[] { invalidTokenEx.Message }, response.StatusCode,
+                    "Unauthorized");
+                break;
+            
             default:
                 response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 errorResponse = new ErrorResponse(new[] { ex.Message}, response.StatusCode, "Internal Server Error"); 

@@ -61,6 +61,11 @@ public class ExceptionMiddleware
                 errorResponse = new ErrorResponse(new[] { invalidTokenEx.Message }, response.StatusCode,
                     "Unauthorized");
                 break;
+            case AccountLockedException accountLockedEx:
+                response.StatusCode = (int)HttpStatusCode.Forbidden;
+                errorResponse = new ErrorResponse(new[] { accountLockedEx.Message },
+                    response.StatusCode, "Account Locked");
+                break; 
             
             default:
                 response.StatusCode = (int)HttpStatusCode.InternalServerError;

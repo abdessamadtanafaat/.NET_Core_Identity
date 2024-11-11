@@ -78,7 +78,7 @@ public class AuthenticationService : IAuthenticationService
         int lockoutDurationMinutes = int.Parse(_configuration["Security:LockoutDurationMinutes"]); 
         if (await _userManager.IsLockedOutAsync(user))
         {
-            throw new InvalidOperationException(
+            throw new AccountLockedException(
                 "Your account is locked after several unsuccessful attempts. Please try again later."); 
         }
 
@@ -89,7 +89,7 @@ public class AuthenticationService : IAuthenticationService
             if (user.AccessFailedCount >= maxFailedAttempts)
             {
                 await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddMinutes(lockoutDurationMinutes)); 
-                throw new InvalidOperationException(
+                throw new AccountLockedException(
                     "Your account is locked after several unsuccessful attempts. Please try again later.");
             }
             throw new AuthenticationException("Invalid Email or password.");

@@ -6,15 +6,14 @@ using ValidationException = Authentication_Authorisation.Exceptions.ValidationEx
 
 namespace Authentication_Authorisation.Controllers;
 
-[Route("api/users")]
+[Route("api/")]
 [ApiController]
 public class AuthenticationController : ControllerBase
 {
-    private readonly IAuthenticationService _authService; 
-    
-    public AuthenticationController(IAuthenticationService authService)
+    private readonly IAuthenticationService _authService;
+    public AuthenticationController(IAuthenticationService authService )
     {
-        _authService = authService; 
+        _authService = authService;
     }
 
     [HttpPost("register")]
@@ -42,15 +41,14 @@ public class AuthenticationController : ControllerBase
             var response = await _authService.LoginAsync(loginDto);
             return Ok(response); 
     }
-    /*Example : async {
-        "email": "raja@gmail.com",
-        "password": "Raja2015"
+    /*Example : admin  {
+  "email": "tnf@abdessamadit.com",
+  "password": "Raja2015",
     }*/
 
-    [HttpPost("refresh-token")]
-    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest refreshTokenRequest)
-    {
-        var response = await _authService.RefreshToken(refreshTokenRequest);
-        return Ok(response);
-    }
+    /*Example : user  {
+"email": "tanafaat.wac.49@gmail.com",
+"password": "Raja2015",
+}*/
+
 }

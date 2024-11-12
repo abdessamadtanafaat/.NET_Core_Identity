@@ -8,7 +8,6 @@ using Authentication_Authorisation.DTO;
 using Authentication_Authorisation.Models;
 using Authentication_Authorisation.Exceptions;
 using Authentication_Authorisation.Utils;
-using Microsoft.IdentityModel.Tokens;
 using TaskValidationException = Authentication_Authorisation.Exceptions.ValidationException;
 using ValidationFailure = FluentValidation.Results.ValidationFailure;
 
@@ -54,6 +53,17 @@ public class AuthenticationService : IAuthenticationService
         
         // Create the user in the system asynchronously.
         var result = await _userManager.CreateAsync(user, registerDto.Password);
+        
+        var adminEmailDomain = _configuration["AdminSettings:AdminEmailDomain"];
+        if (user.Email.EndsWith($"@{adminEmailDomain}"))
+        {
+            await _userManager.AddToRoleAsync(user, "admin"); 
+        }
+        else
+        {
+            await _userManager.AddToRoleAsync(user, "user"); 
+        }
+        
         if (result.Succeeded)
         {
             return new SuccessResponse("User Registered Successfully!", 201);
@@ -102,53 +112,8 @@ public class AuthenticationService : IAuthenticationService
         var refreshToken = _tokenUtils.GenerateRefreshToken();
         var refreshTokenExpiryTime = DateTime.UtcNow.AddDays(int.Parse(_configuration["Jwt:RefreshTokenExpirationDays"])); 
         
-        return new TokenResponse(token, refreshToken, "Login successful."); 
+        return new TokenResponse(await token, refreshToken, "Login successful."); 
     }
 
-    public async Task<TokenResponse> RefreshToken(RefreshTokenRequest refreshTokenRequest)
-    {
-        if (string.IsNullOrEmpty(refreshTokenRequest.Token) || string.IsNullOrEmpty(refreshTokenRequest.RefreshToken))
-        {
-            throw new InvalidTokenException("Token cannot be empty.");
-        }
-        ClaimsPrincipal principal = null;
-
-        try
-        { 
-            principal = _tokenUtils.GetPrincipalFromExpiredToken(refreshTokenRequest.Token);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidTokenException("Invalid token provided.");
-        }
-        
-        if (principal == null)
-        {
-            throw new InvalidTokenException("Invalid access token or refresh token");
-        }
-
-        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        var user = await _userManager.FindByIdAsync(userId);
-
-        if (user == null)
-        {
-            throw new InvalidTokenException("User Not Found"); 
-        }
-
-        // Commented out: no need to verify the refresh token with the two-factor provider for now
-        /*var isValidRefreshToken =
-            await _userManager.VerifyUserTokenAsync(user, "Default", "RefreshToken", refreshTokenRequest.RefreshToken);
-        if (!isValidRefreshToken)
-        {
-            throw new InvalidTokenException("Invalid refreshToken");
-        }*/
-        
-        var newAccessToken = _tokenUtils.GenerateJwtToken(user);
-        var newRefreshToken = _tokenUtils.GenerateRefreshToken();
-
-        await _userManager.SetAuthenticationTokenAsync(user, "Default", "RefreshToken", newRefreshToken);
-        return new TokenResponse(newAccessToken,  newRefreshToken,"Token refreshed successfully.");
-
-    }
 
 }

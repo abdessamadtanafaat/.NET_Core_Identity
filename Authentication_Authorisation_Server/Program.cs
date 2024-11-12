@@ -23,7 +23,8 @@ builder.Services.AddSwaggerGen();
 // Register the IAuthenticationService and AuthenticationService
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<TokenUtils>();
-
+builder.Services.AddScoped<IRoleSeederService, RoleSeederService>(); 
+builder.Services.AddScoped<ITokenService, TokenService>();
 // Database configuration
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -77,8 +78,8 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v1", new OpenApiInfo()
     {
         Version = "v1",
-        Title = "Task Management API",
-        Description = "An ASP.NET Core Web API for Task Management Application",
+        Title = "Authentication & Authorization",
+        Description = "An ASP.NET Core Web API for Authentication_Authorization",
         TermsOfService = new Uri("https://example.com/terms"),
         Contact = new OpenApiContact
         {
@@ -110,5 +111,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Seed Roles in the startup of the application. 
+using (var scope = app.Services.CreateScope())
+{
+    var roleSeeder = scope.ServiceProvider.GetRequiredService<IRoleSeederService>();
+    await roleSeeder.SeedRoleAsync(); 
+}
 
 app.Run();

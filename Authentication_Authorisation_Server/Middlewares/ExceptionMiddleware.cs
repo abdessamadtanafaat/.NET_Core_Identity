@@ -21,6 +21,15 @@ public class ExceptionMiddleware
         try
         {
             await _next(context); //Call the next middleware int the pipeline
+            if (context.Response.StatusCode == StatusCodes.Status403Forbidden)
+            {
+                _logger.LogWarning("Forbidden access attempt detected");
+                context.Response.ContentType = "application/json";
+                 var errorResponse = new ErrorResponse(
+                    new[] { "You do not have permission to access this resource." },
+                    403,
+                    "Access Denied"); 
+            }
         }
         catch (Exception ex)
         {
@@ -39,6 +48,15 @@ public class ExceptionMiddleware
         // Determine the type of the Exception.
         switch (ex)
         {
+            // handle 403 forbidden security Token.
+            case SecurityTokenException  unauthorizedAccessException: 
+                response.StatusCode = (int)HttpStatusCode.Forbidden;
+                errorResponse = new ErrorResponse(
+                    new[] { unauthorizedAccessException.Message },
+                    response.StatusCode,
+                    "Access Denied"); 
+                break; 
+            
             case ValidationException validationEx:
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                 errorResponse = new ErrorResponse(validationEx.Errors.Select(e => e.ErrorMessage), response.StatusCode, "Validation failure");

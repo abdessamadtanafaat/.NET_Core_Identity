@@ -72,7 +72,7 @@ builder.Services.AddTransient<IValidator<RegisterDto>, UserDtoValidator>();
 // AutoMapper configuration
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
-// Swagger configuration
+// Swagger configuration with Authentication
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo()
@@ -86,6 +86,32 @@ builder.Services.AddSwaggerGen(options =>
             Name = "LinkedIn",
             Url = new Uri("https://www.linkedin.com/in/abdessamadtanafaat/")
         },
+    });
+    
+    // Add JWT Bearer  Authentication to swagger. 
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorisation",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT authorisation header using the bearer scheme. Example : \"Authorisation: Bearer {token}\""
+    }); 
+    
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme, 
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
     });
 });
 

@@ -10,7 +10,6 @@ using Authentication_Authorisation.DTO;
 using Authentication_Authorisation.Mappings;
 using Authentication_Authorisation.Models;
 using Authentication_Authorisation.Services;
-using Authentication_Authorisation.Utils;
 using Authentication_Authorisation.Validations;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,7 +21,6 @@ builder.Services.AddSwaggerGen();
 
 // Register the IAuthenticationService and AuthenticationService
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
-builder.Services.AddScoped<TokenUtils>();
 builder.Services.AddScoped<IRoleSeederService, RoleSeederService>(); 
 builder.Services.AddScoped<ITokenService, TokenService>();
 // Database configuration

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Identity;
 using Authentication_Authorisation.DTO;
 using Authentication_Authorisation.Models;
 using Authentication_Authorisation.Exceptions;
-using Authentication_Authorisation.Utils;
 using TaskValidationException = Authentication_Authorisation.Exceptions.ValidationException;
 using ValidationFailure = FluentValidation.Results.ValidationFailure;
 
@@ -20,22 +19,22 @@ public class AuthenticationService : IAuthenticationService
     private readonly UserManager<User> _userManager;
     private readonly IMapper _mapper;
     private readonly IValidator<RegisterDto> _userDtoValidator;
-    private readonly TokenUtils _tokenUtils;
     private readonly IConfiguration _configuration;
+    private readonly ITokenService _tokenService;
 
     public AuthenticationService(
         UserManager<User> userManager,
         IMapper mapper,
         IValidator<RegisterDto> userDtoValidator,
-        TokenUtils tokenUtils,
-        IConfiguration configuration
+        IConfiguration configuration,
+        ITokenService tokenService
         )
     {
         _userManager = userManager;
         _mapper = mapper;
         _userDtoValidator = userDtoValidator;
-        _tokenUtils = tokenUtils;
         _configuration = configuration;
+        _tokenService = _tokenService;
     }
     
     public async Task<SuccessResponse> RegisterUserAsync(RegisterDto registerDto)
@@ -108,11 +107,13 @@ public class AuthenticationService : IAuthenticationService
 
         await _userManager.ResetAccessFailedCountAsync(user);
         
-        var token = _tokenUtils.GenerateJwtToken(user);
-        var refreshToken = _tokenUtils.GenerateRefreshToken();
-        var refreshTokenExpiryTime = DateTime.UtcNow.AddDays(int.Parse(_configuration["Jwt:RefreshTokenExpirationDays"])); 
+        var token = await _tokenService.GenerateJwtToken(user);
+        var refreshToken = _tokenService.GenerateRefreshToken();
         
-        return new TokenResponse(await token, refreshToken, "Login successful."); 
+        //store the refresh token in ASP.NET USERS TOKENS . 
+        await _userManager.SetAuthenticationTokenAsync(user, "Default", "RefreshToken", refreshToken); 
+        
+        return new TokenResponse( token, refreshToken, "Login successful."); 
     }
 
 

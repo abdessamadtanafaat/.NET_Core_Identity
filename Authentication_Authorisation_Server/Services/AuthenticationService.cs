@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Security.Claims;
+﻿using Authentication_Authorisation.Data;
 using AutoMapper;
 using FluentValidation;
 using FluentValidation.Results;
@@ -7,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Authentication_Authorisation.DTO;
 using Authentication_Authorisation.Models;
 using Authentication_Authorisation.Exceptions;
+using Microsoft.EntityFrameworkCore;
 using TaskValidationException = Authentication_Authorisation.Exceptions.ValidationException;
 using ValidationFailure = FluentValidation.Results.ValidationFailure;
 
@@ -20,21 +20,23 @@ public class AuthenticationService : IAuthenticationService
     private readonly IMapper _mapper;
     private readonly IValidator<RegisterDto> _userDtoValidator;
     private readonly IConfiguration _configuration;
-    private readonly ITokenService _tokenService;
+    private readonly AppDbContext _appDbContext;
+    private readonly ITokenService _tokenService; 
 
     public AuthenticationService(
         UserManager<User> userManager,
         IMapper mapper,
         IValidator<RegisterDto> userDtoValidator,
         IConfiguration configuration,
-        ITokenService tokenService
-        )
+        AppDbContext appDbContext,
+        ITokenService tokenService)
     {
         _userManager = userManager;
         _mapper = mapper;
         _userDtoValidator = userDtoValidator;
         _configuration = configuration;
-        _tokenService = _tokenService;
+        _appDbContext = appDbContext;
+        _tokenService = tokenService; 
     }
     
     public async Task<SuccessResponse> RegisterUserAsync(RegisterDto registerDto)
@@ -109,10 +111,35 @@ public class AuthenticationService : IAuthenticationService
         
         var token = await _tokenService.GenerateJwtToken(user);
         var refreshToken = _tokenService.GenerateRefreshToken();
-        
+
+        var expiryTime = DateTime.UtcNow.AddDays(int.Parse(_configuration["Jwt:RefreshTokenExpirationDays"]));
+
+        // find the old token . 
+        var userToken = await _appDbContext.UserTokens.FirstOrDefaultAsync(t => t.UserId == user.Id &&
+            t.LoginProvider == "Default" &&
+            t.Name == "RefreshToken");
+
+        if (userToken != null)
+        {
+            userToken.Value = refreshToken;
+            userToken.ExpiryTime = expiryTime;
+            _appDbContext.UserTokens.Update(userToken); 
+        }
+        else
+        {
         //store the refresh token in ASP.NET USERS TOKENS . 
-        await _userManager.SetAuthenticationTokenAsync(user, "Default", "RefreshToken", refreshToken); 
-        
+        userToken = new UserToken
+        {
+            UserId = user.Id,
+            LoginProvider = "Default",
+            Name = "RefreshToken",
+            Value = refreshToken,
+            ExpiryTime = expiryTime
+        };
+         _appDbContext.UserTokens.Add(userToken);
+            
+        }
+        await _appDbContext.SaveChangesAsync(); 
         return new TokenResponse( token, refreshToken, "Login successful."); 
     }
 

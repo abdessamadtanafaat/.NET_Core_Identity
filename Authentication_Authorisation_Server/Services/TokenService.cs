@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;
+using Authentication_Authorisation.Data;
 using Microsoft.IdentityModel.Tokens;
 using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
 
@@ -14,18 +15,21 @@ public class TokenService : ITokenService
 {
     private readonly UserManager<User> _userManager;
     private readonly IConfiguration _configuration; 
-    private readonly RoleManager<IdentityRole> _roleManager; 
+    private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly AppDbContext _appDbContext; 
 
  
     public TokenService(
         UserManager<User> userManager,
         IConfiguration configuration,
-        RoleManager<IdentityRole> roleManager
+        RoleManager<IdentityRole> roleManager,
+        AppDbContext appDbContext
         )
     {
         _userManager = userManager;
         _configuration = configuration;
         _roleManager = roleManager;
+        _appDbContext = appDbContext;
 
     }
     
@@ -64,25 +68,27 @@ public class TokenService : ITokenService
         {
             throw new InvalidTokenException("Invalid Refresh Token"); 
         }
-        
-
-        // check if the refresh token has expired.
-
-        var refreshTokenExpiryDays = int.Parse(_configuration["Jwt:RefreshTokenExpirationDays"]);
-        var tokenCreatedDate = DateTime.UtcNow.AddMinutes(-refreshTokenExpiryDays);
-        if (tokenCreatedDate > DateTime.UtcNow)
-        {
-            throw new InvalidTokenException("Refresh token has expired."); 
-        }
-
         // invalidate the old refresh token be deleting it.
         await _userManager.RemoveAuthenticationTokenAsync(user, "Default", "RefreshToken"); 
 
         // generate new access and refresh token .
         var newAccessToken = await GenerateJwtToken(user);
         var newRefreshToken = GenerateRefreshToken();
-
-        await _userManager.SetAuthenticationTokenAsync(user, "Default", "RefreshToken", newRefreshToken);
+        var newRefreshTokenExpiryTime =
+            DateTime.UtcNow.AddDays(int.Parse(_configuration["Jwt:RefreshTokenExpirationDays"]));
+        
+        // store it in the database.
+        var newUserToken = new UserToken
+        {
+            UserId = user.Id,
+            LoginProvider = "Default",
+            Name = "RefreshToken",
+            Value = newRefreshToken,
+            ExpiryTime = newRefreshTokenExpiryTime
+        };
+        await _appDbContext.UserTokens.AddAsync(newUserToken);
+        await _appDbContext.SaveChangesAsync(); 
+        //await _userManager.SetAuthenticationTokenAsync(user, "Default", "RefreshToken", newRefreshToken);
         return new TokenResponse( newAccessToken,  newRefreshToken,"Token refreshed successfully.");
 
     }
@@ -117,7 +123,6 @@ public class TokenService : ITokenService
             claims: authClaims,
             signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
         );
-
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 

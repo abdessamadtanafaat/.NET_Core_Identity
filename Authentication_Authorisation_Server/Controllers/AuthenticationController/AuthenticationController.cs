@@ -43,12 +43,12 @@ public class AuthenticationController : ControllerBase
     }
     /*Example : admin  {
   "email": "tnf@abdessamadit.com",
-  "password": "Raja2015",
+  "password": "Raja2015"
     }*/
 
     /*Example : user  {
-"email": "tanafaat.wac.49@gmail.com",
-"password": "Raja2015",
+  "email": "tanafaat.rca.16@gmail.com",
+  "password": "Raja2015"
 }*/
 
 }

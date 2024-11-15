@@ -7,5 +7,6 @@ public interface IAuthenticationService
 {
     Task<SuccessResponse> RegisterUserAsync(RegisterDto registerDto); 
     Task<TokenResponse> LoginAsync(LoginDto loginDto);
-    
+
+    Task<string> LogoutAsync();
 }

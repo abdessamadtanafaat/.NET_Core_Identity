@@ -1,4 +1,5 @@
-﻿using Authentication_Authorisation.Data;
+﻿using System.Security.Claims;
+using Authentication_Authorisation.Data;
 using AutoMapper;
 using FluentValidation;
 using FluentValidation.Results;
@@ -21,7 +22,8 @@ public class AuthenticationService : IAuthenticationService
     private readonly IValidator<RegisterDto> _userDtoValidator;
     private readonly IConfiguration _configuration;
     private readonly AppDbContext _appDbContext;
-    private readonly ITokenService _tokenService; 
+    private readonly ITokenService _tokenService;
+    private readonly IHttpContextAccessor _httpContextAccessor; 
 
     public AuthenticationService(
         UserManager<User> userManager,
@@ -29,14 +31,17 @@ public class AuthenticationService : IAuthenticationService
         IValidator<RegisterDto> userDtoValidator,
         IConfiguration configuration,
         AppDbContext appDbContext,
-        ITokenService tokenService)
+        ITokenService tokenService,
+        IHttpContextAccessor httpContextAccessor
+        )
     {
         _userManager = userManager;
         _mapper = mapper;
         _userDtoValidator = userDtoValidator;
         _configuration = configuration;
         _appDbContext = appDbContext;
-        _tokenService = tokenService; 
+        _tokenService = tokenService;
+        _httpContextAccessor = httpContextAccessor; 
     }
     
     public async Task<SuccessResponse> RegisterUserAsync(RegisterDto registerDto)
@@ -143,5 +148,16 @@ public class AuthenticationService : IAuthenticationService
         return new TokenResponse( token, refreshToken, "Login successful."); 
     }
 
+    public async Task<string> LogoutAsync()
+    {
+        var userId = _httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value; 
+        var user = await _userManager.FindByIdAsync(userId);
+        var refreshToken = _appDbContext.UserTokens.FirstOrDefault(t => t.UserId == userId);
+        //_appDbContext.UserTokens.Remove(refreshToken);
+        // invalidate the old refresh token be deleting it.
+        await _userManager.RemoveAuthenticationTokenAsync(user, "Default", "RefreshToken"); 
 
+        await _appDbContext.SaveChangesAsync();
+        return "Logout successful."; 
+    }   
 }

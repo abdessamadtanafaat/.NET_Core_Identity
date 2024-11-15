@@ -11,8 +11,12 @@ using Authentication_Authorisation.Mappings;
 using Authentication_Authorisation.Models;
 using Authentication_Authorisation.Services;
 using Authentication_Authorisation.Validations;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Register IHttpContextAccessor
+builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 // Add services to the container.
 builder.Services.AddControllers();

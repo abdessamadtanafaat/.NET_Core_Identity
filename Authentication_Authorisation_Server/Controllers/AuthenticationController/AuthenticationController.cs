@@ -41,6 +41,13 @@ public class AuthenticationController : ControllerBase
             var response = await _authService.LoginAsync(loginDto);
             return Ok(response); 
     }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var response = await _authService.LogoutAsync();
+        return Ok(response); 
+    }
     /*Example : admin  {
   "email": "tnf@abdessamadit.com",
   "password": "Raja2015"

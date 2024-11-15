@@ -88,7 +88,6 @@ public class TokenService : ITokenService
         };
         await _appDbContext.UserTokens.AddAsync(newUserToken);
         await _appDbContext.SaveChangesAsync(); 
-        //await _userManager.SetAuthenticationTokenAsync(user, "Default", "RefreshToken", newRefreshToken);
         return new TokenResponse( newAccessToken,  newRefreshToken,"Token refreshed successfully.");
 
     }
@@ -110,6 +109,8 @@ public class TokenService : ITokenService
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+
 
         };
         authClaims.AddRange(userClaims);

@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -12,6 +13,7 @@ using Authentication_Authorisation.Models;
 using Authentication_Authorisation.Services;
 using Authentication_Authorisation.Validations;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +29,11 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IRoleSeederService, RoleSeederService>(); 
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
+
+
+builder.Services.AddTransient<IEmailSender, EmailSender>(); 
+
 // Database configuration
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -35,6 +42,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
+
+
+// provider de token specifique pour l'email. 
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+{
+    options.TokenLifespan = TimeSpan.FromHours(3);
+}); 
 
 builder.Services.Configure<IdentityOptions>(options =>
 {
@@ -46,7 +60,7 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.Password.RequireNonAlphanumeric = false;
     // Username settings
     options.User.RequireUniqueEmail = true;
-}); 
+});
 
 // Configure JWT authentication
 builder.Services.AddAuthentication(options =>

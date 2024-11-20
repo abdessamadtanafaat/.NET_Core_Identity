@@ -19,11 +19,11 @@ public class AuthenticationController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
     {
-        try
-        {
+        /*try
+        {*/
             var successResponse = await _authService.RegisterUserAsync(registerDto);
             return Ok(successResponse);
-        }
+        /*}
         catch(ValidationException ex)
         {
             var errorResponse = new ErrorResponse(ex.Errors.Select(e => e.ErrorMessage), 400, "Validation Failure");
@@ -32,7 +32,7 @@ public class AuthenticationController : ControllerBase
         catch
         {
             return StatusCode(500, new ErrorResponse(new[] { "An unexpected error occurred." }, 500,"An Unexpected error occured.")); 
-        }
+        }*/
     }
 
     [HttpPost("login")]
@@ -58,4 +58,9 @@ public class AuthenticationController : ControllerBase
   "password": "Raja2015"
 }*/
 
+    /*{
+        "email": "tanafaat.rca.16@gmail.com",
+        "password": "Raja2015",
+        "fullName": "tanafaat admin"
+    }*/
 }
